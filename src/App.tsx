@@ -6,25 +6,20 @@ import { VehicleDetail } from './components/VehicleDetail';
 import { Cart } from './components/Cart';
 import { AdminPanel } from './components/AdminPanel';
 
+// CORRECCIÓN 1: Ajustamos el tipo para que coincida con tu Base de Datos MySQL
 export type Vehicle = {
   id: number;
   brand: string;
   model: string;
   year: number;
   price: number;
-  image: string;
+  horsepower: number; // Ahora está directo, no dentro de specs
   description: string;
-  specs: {
-    engine: string;
-    transmission: string;
-    horsepower: number;
-    acceleration: string;
-    topSpeed: string;
-    fuelType: string;
-  };
-  gallery: string[];
+  image: string;
+  sold: number; // Agregamos sold (0 o 1)
 };
 
+// (Opcional) Si usas carrito, esto se mantiene, aunque por ahora no lo estamos llenando desde la DB
 export type CartItem = Vehicle & { quantity: number };
 
 export default function App() {
@@ -49,6 +44,7 @@ export default function App() {
     setCurrentView('detail');
   };
 
+  // Lógica de carrito (se mantiene por si la usas luego)
   const handleAddToCart = (vehicle: Vehicle) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === vehicle.id);
@@ -92,6 +88,7 @@ export default function App() {
           cartItemsCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
         />
       )}
+      
       {currentView === 'catalog' && (
         <Catalog
           onNavigate={setCurrentView}
@@ -100,15 +97,15 @@ export default function App() {
           cartItemsCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
         />
       )}
+      
+      {/* CORRECCIÓN 2: Aquí conectamos el botón de volver */}
       {currentView === 'detail' && selectedVehicle && (
         <VehicleDetail
           vehicle={selectedVehicle}
-          onNavigate={setCurrentView}
-          onAddToCart={handleAddToCart}
-          onLogout={handleLogout}
-          cartItemsCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+          onBack={() => setCurrentView('catalog')}
         />
       )}
+      
       {currentView === 'cart' && (
         <Cart
           items={cart}
@@ -118,6 +115,7 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
+      
       {currentView === 'admin' && (
         <AdminPanel
           onNavigate={setCurrentView}
