@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, Calendar, Zap, Plus, Filter, X, Info } from 'lucide-react';
+import { Search, Calendar, Zap, Plus, Filter, X, Info, Package } from 'lucide-react';
 import { Vehicle } from '../App';
 
 type CatalogProps = {
@@ -15,22 +15,23 @@ type CatalogProps = {
   cartItemsCount: number;
 };
 
-// Imagen de respaldo por si la URL falla o está vacía
+// Imagen de respaldo
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?q=80&w=1000&auto=format&fit=crop";
 
 export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }: CatalogProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [search, setSearch] = useState("");
-  const [hideSold, setHideSold] = useState(false);
+  const [hideOutOfStock, setHideOutOfStock] = useState(false); // Renombrado para claridad
   const [isAdding, setIsAdding] = useState(false);
 
-  // Formulario
+  // Formulario actualizado con stock
   const [newVehicle, setNewVehicle] = useState({
     brand: 'Ford', 
     model: '', 
     year: new Date().getFullYear(), 
     price: '' as number | string,      
-    horsepower: '' as number | string, 
+    horsepower: '' as number | string,
+    stock: '' as number | string, // Nuevo campo
     description: '', 
     image: ''
   });
@@ -50,6 +51,7 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
 
   const markAsSold = async (id: number) => {
     try {
+      // Asumimos que el backend ahora descuenta 1 al stock en este endpoint
       await axios.put(`http://localhost:3001/vehicles/sell/${id}`);
       loadVehicles();
     } catch (error) {
@@ -64,21 +66,21 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
       return;
     }
     try {
-      // Preparamos los datos incluyendo la IMAGEN
       const payload = {
           ...newVehicle,
           brand: 'Ford',
           year: Number(newVehicle.year),
           price: Number(newVehicle.price),
           horsepower: Number(newVehicle.horsepower),
-          image: newVehicle.image // Aquí enviamos la URL que escribiste
+          stock: Number(newVehicle.stock) || 1, // Enviamos el stock
+          image: newVehicle.image 
       };
       await axios.post("http://localhost:3001/vehicles", payload);
       setIsAdding(false);
       // Limpiar formulario
       setNewVehicle({ 
         brand: 'Ford', model: '', year: 2025, price: '', 
-        horsepower: '', description: '', image: '' 
+        horsepower: '', stock: '', description: '', image: '' 
       });
       loadVehicles();
     } catch (error) {
@@ -89,8 +91,9 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
 
   const filtered = vehicles.filter(v => {
     const matchesSearch = `${v.brand} ${v.model} ${v.year}`.toLowerCase().includes(search.toLowerCase());
-    const matchesSoldFilter = hideSold ? v.sold === 0 : true; 
-    return matchesSearch && matchesSoldFilter;
+    // Filtro basado en stock > 0
+    const matchesStockFilter = hideOutOfStock ? v.stock > 0 : true; 
+    return matchesSearch && matchesStockFilter;
   });
 
   return (
@@ -127,16 +130,16 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
               />
             </div>
             
-            <div className="flex items-center gap-2 border p-2 rounded-md bg-white hover:bg-slate-50 transition cursor-pointer" onClick={() => setHideSold(!hideSold)}>
-                <Filter className={`transition ${hideSold ? 'text-blue-600' : 'text-slate-400'}`} size={18} />
+            <div className="flex items-center gap-2 border p-2 rounded-md bg-white hover:bg-slate-50 transition cursor-pointer" onClick={() => setHideOutOfStock(!hideOutOfStock)}>
+                <Filter className={`transition ${hideOutOfStock ? 'text-blue-600' : 'text-slate-400'}`} size={18} />
                 <label className="text-sm text-slate-700 cursor-pointer select-none flex items-center gap-2">
                     <input 
                         type="checkbox" 
-                        checked={hideSold} 
-                        onChange={(e) => setHideSold(e.target.checked)}
+                        checked={hideOutOfStock} 
+                        onChange={(e) => setHideOutOfStock(e.target.checked)}
                         className="w-4 h-4 accent-blue-600 cursor-pointer"
                     />
-                    Ocultar Vendidos
+                    Ocultar Agotados
                 </label>
             </div>
           </div>
@@ -162,12 +165,13 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                             <Input placeholder="Ej. Mustang GT" value={newVehicle.model} onChange={e => setNewVehicle({...newVehicle, model: e.target.value})} required />
                         </div>
                         
-                        <div className="grid grid-cols-3 gap-4">
+                        {/* GRID DE 4 COLUMNAS PARA INCLUIR STOCK */}
+                        <div className="grid grid-cols-4 gap-3">
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-slate-500">Año</label>
                                 <Input type="number" value={newVehicle.year} onChange={e => setNewVehicle({...newVehicle, year: Number(e.target.value)})} />
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 col-span-2">
                                 <label className="text-xs font-semibold text-slate-500">Precio ($)</label>
                                 <Input type="number" placeholder="0.00" value={newVehicle.price} onChange={e => setNewVehicle({...newVehicle, price: e.target.value})} />
                             </div>
@@ -177,14 +181,29 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                             </div>
                         </div>
 
-                        {/* INPUT PARA PEGAR URL DE IMAGEN */}
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-500">URL Imagen (Opcional)</label>
-                            <Input 
-                                placeholder="Pegar enlace de imagen..." 
-                                value={newVehicle.image} 
-                                onChange={e => setNewVehicle({...newVehicle, image: e.target.value})} 
-                            />
+                        {/* INPUT STOCK */}
+                        <div className="grid grid-cols-2 gap-3">
+                             <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-500">Stock Inicial</label>
+                                <div className="relative">
+                                    <Package className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 size-4"/>
+                                    <Input 
+                                        type="number" 
+                                        placeholder="1" 
+                                        className="pl-8"
+                                        value={newVehicle.stock} 
+                                        onChange={e => setNewVehicle({...newVehicle, stock: e.target.value})} 
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-500">URL Imagen</label>
+                                <Input 
+                                    placeholder="http://..." 
+                                    value={newVehicle.image} 
+                                    onChange={e => setNewVehicle({...newVehicle, image: e.target.value})} 
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-1">
@@ -207,28 +226,27 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
             </div>
         )}
 
-        {/* GRID DE 3 COLUMNAS MÍNIMO */}
+        {/* GRID DE VEHÍCULOS */}
         <div className="grid grid-cols-3 xl:grid-cols-4 gap-6 pb-10">
           {filtered.map(vehicle => (
             <Card key={vehicle.id} className="shadow-sm hover:shadow-lg transition flex flex-col h-full overflow-hidden border-slate-200 rounded-lg font-sans group">
               
-              {/* === LÓGICA DE IMAGEN MEJORADA === */}
+              {/* IMAGEN Y OVERLAY DE AGOTADO */}
               <div className="relative w-full bg-slate-200 overflow-hidden" style={{ height: '160px' }}>
                 <img
-                  // Intenta usar vehicle.image. Si no existe, usa DEFAULT.
                   src={vehicle.image || DEFAULT_IMAGE}
                   alt={vehicle.model}
-                  // Si la URL falla (error 404 o texto basura), cambia automáticamente al default.
                   onError={(e) => { e.currentTarget.src = DEFAULT_IMAGE; }}
-                  
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  className={`transition duration-500 ${vehicle.sold === 1 ? 'grayscale opacity-70' : 'group-hover:scale-105'}`}
+                  // Si stock es 0, ponemos gris la imagen
+                  className={`transition duration-500 ${vehicle.stock === 0 ? 'grayscale opacity-70' : 'group-hover:scale-105'}`}
                 />
 
-                {vehicle.sold === 1 && (
+                {/* ETIQUETA AGOTADO (SOLO SI STOCK ES 0) */}
+                {vehicle.stock === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
-                     <span className="border-2 border-white bg-red-600 text-white px-3 py-1 rounded font-bold text-xs transform -rotate-12 shadow-xl">
-                        VENDIDO
+                     <span className="border-2 border-white bg-slate-700 text-white px-3 py-1 rounded font-bold text-xs transform -rotate-12 shadow-xl">
+                        AGOTADO
                      </span>
                   </div>
                 )}
@@ -264,7 +282,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                   {/* BOTONES */}
                   <div className="grid grid-cols-2 gap-2">
                     
-                    {/* BOTÓN MÁS INFO: Navega al detalle */}
                     <Button
                         variant="outline"
                         className="h-9 text-xs border-slate-300 text-slate-700 hover:bg-slate-50"
@@ -273,20 +290,20 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                         <Info className="mr-1 size-3.5" /> Más Info
                     </Button>
 
-                    {/* BOTÓN VENDER */}
-                    {vehicle.sold === 0 ? (
+                    {/* BOTÓN VENDER (DESHABILITADO SI STOCK 0) */}
+                    {vehicle.stock > 0 ? (
                         <Button
-                        className="h-9 text-xs bg-slate-900 text-white hover:bg-slate-800"
-                        onClick={() => markAsSold(vehicle.id)}
+                            className="h-9 text-xs bg-slate-900 text-white hover:bg-slate-800"
+                            onClick={() => markAsSold(vehicle.id)}
                         >
-                        Vender
+                            Vender
                         </Button>
                     ) : (
                         <Button
-                        className="h-9 text-xs bg-slate-100 text-slate-400 cursor-not-allowed"
-                        disabled
+                            className="h-9 text-xs bg-slate-100 text-slate-400 cursor-not-allowed"
+                            disabled
                         >
-                        Vendido
+                            Agotado
                         </Button>
                     )}
                   </div>

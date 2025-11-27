@@ -1,33 +1,61 @@
+// App.tsx
 import { useState } from 'react';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { Catalog } from './components/Catalog';
+import { AccessoriesCatalog } from './components/AccessoriesCatalog';
 import { VehicleDetail } from './components/VehicleDetail';
 import { Cart } from './components/Cart';
 import { AdminPanel } from './components/AdminPanel';
 
-// CORRECCIÓN 1: Ajustamos el tipo para que coincida con tu Base de Datos MySQL
+// ------------------- TIPOS -------------------
 export type Vehicle = {
   id: number;
   brand: string;
   model: string;
   year: number;
   price: number;
-  horsepower: number; // Ahora está directo, no dentro de specs
+  horsepower: number;
   description: string;
   image: string;
-  sold: number; // Agregamos sold (0 o 1)
+  sold: number;
+  stock: number;
 };
 
-// (Opcional) Si usas carrito, esto se mantiene, aunque por ahora no lo estamos llenando desde la DB
-export type CartItem = Vehicle & { quantity: number };
+export type Accessory = {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  image: string;
+};
+
+export type CartItem = {
+  id: number;
+  type: 'vehicle' | 'accessory';
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+};
+
+// ------------------------------------------------
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'catalog' | 'detail' | 'cart' | 'admin'>('login');
+  const [currentView, setCurrentView] = useState<
+    'login' | 'dashboard' | 'catalog' | 'accessories' | 'detail' | 'cart' | 'admin'
+  >('login');
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+
   const [cart, setCart] = useState<CartItem[]>([]);
 
+  // ------------------ LOGIN ------------------
   const handleLogin = () => {
     setIsAuthenticated(true);
     setCurrentView('dashboard');
@@ -39,73 +67,133 @@ export default function App() {
     setCart([]);
   };
 
+  // ------------------ VER DETALLE VEHÍCULO ------------------
   const handleViewVehicle = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setCurrentView('detail');
   };
 
-  // Lógica de carrito (se mantiene por si la usas luego)
-  const handleAddToCart = (vehicle: Vehicle) => {
+  // ------------------ AGREGAR VEHÍCULO AL CARRITO ------------------
+  const addVehicleToCart = (vehicle: Vehicle) => {
     setCart(prev => {
-      const existing = prev.find(item => item.id === vehicle.id);
-      if (existing) {
-        return prev.map(item =>
-          item.id === vehicle.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+      const existe = prev.find(i => i.id === vehicle.id && i.type === 'vehicle');
+
+      if (existe) {
+        return prev.map(i =>
+          i.id === vehicle.id && i.type === 'vehicle'
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
         );
       }
-      return [...prev, { ...vehicle, quantity: 1 }];
+
+      return [
+        ...prev,
+        {
+          id: vehicle.id,
+          type: 'vehicle',
+          name: `${vehicle.brand} ${vehicle.model}`,
+          price: vehicle.price,
+          quantity: 1,
+          image: vehicle.image,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          year: vehicle.year
+        }
+      ];
     });
   };
 
-  const handleRemoveFromCart = (vehicleId: number) => {
-    setCart(prev => prev.filter(item => item.id !== vehicleId));
+  // ------------------ AGREGAR ACCESORIO AL CARRITO ------------------
+  const addAccessoryToCart = (acc: Accessory) => {
+    setCart(prev => {
+      const existe = prev.find(i => i.id === acc.id && i.type === 'accessory');
+
+      if (existe) {
+        return prev.map(i =>
+          i.id === acc.id && i.type === 'accessory'
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
+        );
+      }
+
+      return [
+        ...prev,
+        {
+          id: acc.id,
+          type: 'accessory',
+          name: acc.name,
+          price: acc.price,
+          quantity: 1,
+          image: acc.image
+        }
+      ];
+    });
   };
 
-  const handleUpdateQuantity = (vehicleId: number, quantity: number) => {
-    if (quantity <= 0) {
-      handleRemoveFromCart(vehicleId);
-    } else {
-      setCart(prev =>
-        prev.map(item =>
-          item.id === vehicleId ? { ...item, quantity } : item
-        )
-      );
-    }
+  // ------------------ REMOVER ITEM ------------------
+  const handleRemoveFromCart = (id: number) => {
+    setCart(prev => prev.filter(item => item.id !== id));
   };
+
+  // ------------------ ACTUALIZAR CANTIDAD ------------------
+  const handleUpdateQuantity = (id: number, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveFromCart(id);
+      return;
+    }
+    setCart(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  // ------------------ RENDER ------------------
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
   }
 
+  const cartItemsCount = cart.reduce((sum, i) => sum + i.quantity, 0);
+
   return (
     <div className="min-h-screen bg-white">
+
       {currentView === 'dashboard' && (
         <Dashboard
           onNavigate={setCurrentView}
           onLogout={handleLogout}
-          cartItemsCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+          cartItemsCount={cartItemsCount}
         />
       )}
-      
+
       {currentView === 'catalog' && (
         <Catalog
           onNavigate={setCurrentView}
           onViewVehicle={handleViewVehicle}
+          onAddToCart={addVehicleToCart}
           onLogout={handleLogout}
-          cartItemsCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+          cartItemsCount={cartItemsCount}
         />
       )}
-      
-      {/* CORRECCIÓN 2: Aquí conectamos el botón de volver */}
+
+      {currentView === 'accessories' && (
+        <AccessoriesCatalog
+          onNavigate={setCurrentView}
+          onLogout={handleLogout}
+          onAddAccessory={addAccessoryToCart}
+          cartItemsCount={cartItemsCount}
+        />
+      )}
+
       {currentView === 'detail' && selectedVehicle && (
         <VehicleDetail
           vehicle={selectedVehicle}
+          onAddToCart={addVehicleToCart}
           onBack={() => setCurrentView('catalog')}
         />
       )}
-      
+
       {currentView === 'cart' && (
         <Cart
           items={cart}
@@ -115,12 +203,12 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
-      
+
       {currentView === 'admin' && (
         <AdminPanel
           onNavigate={setCurrentView}
           onLogout={handleLogout}
-          cartItemsCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+          cartItemsCount={cartItemsCount}
         />
       )}
     </div>

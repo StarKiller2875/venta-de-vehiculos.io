@@ -1,9 +1,10 @@
 import { Car, LayoutDashboard, ShoppingCart, Settings, LogOut, Package } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { Button } from './ui/button';
 
 type SidebarProps = {
   currentView: string;
-  onNavigate: (view: 'dashboard' | 'catalog' | 'cart' | 'admin') => void;
+  onNavigate: (view: 'dashboard' | 'catalog' | 'cart' | 'admin' | 'accessories') => void;
   onLogout: () => void;
   cartItemsCount?: number;
 };
@@ -12,6 +13,7 @@ export function Sidebar({ currentView, onNavigate, onLogout, cartItemsCount = 0 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'catalog', label: 'Catálogo', icon: Car },
+    {id : 'accessories', label: 'Accesorios', icon: Wrench},
     { id: 'cart', label: 'Carrito', icon: ShoppingCart, badge: cartItemsCount },
     { id: 'admin', label: 'Administración', icon: Settings },
   ];

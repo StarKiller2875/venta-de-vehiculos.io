@@ -1,27 +1,60 @@
+// src/components/Cart.tsx
 import { Sidebar } from './Sidebar';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Trash2, Plus, Minus, CreditCard, ShoppingBag } from 'lucide-react';
 import { CartItem } from '../App';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import axios from 'axios';
 
 type CartProps = {
   items: CartItem[];
   onNavigate: (view: 'dashboard' | 'catalog' | 'cart' | 'admin') => void;
-  onRemoveItem: (vehicleId: number) => void;
-  onUpdateQuantity: (vehicleId: number, quantity: number) => void;
+  onRemoveItem: (id: number) => void;
+  onUpdateQuantity: (id: number, quantity: number) => void;
   onLogout: () => void;
 };
 
 export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogout }: CartProps) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.16;
-  const total = subtotal + tax;
+  const total = subtotal; // Sin IVA automático para ventas reales
+
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+
+    const confirmPurchase = window.confirm("¿Deseas finalizar la compra?");
+    if (!confirmPurchase) return;
+
+    try {
+      for (const item of items) {
+        if (item.type === "vehicle") {
+          await axios.put(`http://localhost:3001/vehicles/sell/${item.id}`);
+        } else if (item.type === "accessory") {
+          await axios.post(`http://localhost:3001/accessories/buy/${item.id}`, { quantity: item.quantity });
+        }
+      }
+
+      alert("Compra realizada correctamente!");
+
+      // Vaciar carrito local
+      items.forEach(item => onRemoveItem(item.id));
+
+      onNavigate("catalog");
+    } catch (error: any) {
+      console.error("Error al finalizar compra:", error);
+      alert(error.response?.data?.error || "No se pudo completar la compra.");
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar currentView="cart" onNavigate={onNavigate} onLogout={onLogout} cartItemsCount={items.reduce((sum, item) => sum + item.quantity, 0)} />
-      
+      <Sidebar
+        currentView="cart"
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+        cartItemsCount={items.reduce((sum, item) => sum + item.quantity, 0)}
+      />
+
       <div className="flex-1 p-8">
         {/* Header */}
         <div className="mb-8">
@@ -29,7 +62,7 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
           <p className="text-slate-600">
             {items.length === 0
               ? 'Tu carrito está vacío'
-              : `${items.length} ${items.length === 1 ? 'vehículo' : 'vehículos'} en tu carrito`}
+              : `${items.length} ${items.length === 1 ? 'artículo' : 'artículos'} en tu carrito`}
           </p>
         </div>
 
@@ -37,7 +70,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
           <Card className="bg-white border-0 shadow-sm p-16 text-center">
             <ShoppingBag className="size-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-slate-900 mb-2">Tu carrito está vacío</h3>
-            <p className="text-slate-600 mb-6">Explora nuestro catálogo y encuentra tu vehículo ideal</p>
             <Button
               onClick={() => onNavigate('catalog')}
               className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -47,40 +79,48 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
           </Card>
         ) : (
           <div className="grid grid-cols-3 gap-6">
-            {/* Cart Items */}
+
+            {/* ITEMS */}
             <div className="col-span-2 space-y-4">
               {items.map((item) => (
                 <Card key={item.id} className="bg-white border-0 shadow-sm p-6">
                   <div className="flex gap-6">
-                    {/* Image */}
+
+                    {/* IMAGE */}
                     <div className="w-48 h-32 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
                       <ImageWithFallback
                         src={item.image}
-                        alt={`${item.brand} ${item.model}`}
+                        alt={item.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
 
-                    {/* Details */}
+                    {/* DETAILS */}
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="text-slate-500 text-sm mb-1">{item.brand}</p>
-                          <h3 className="text-slate-900">{item.model}</h3>
-                          <p className="text-slate-600 text-sm">{item.year}</p>
+                          <h3 className="text-slate-900 font-bold">{item.name}</h3>
+
+                          {item.type === 'vehicle' && (
+                            <>
+                              <p className="text-slate-500 text-sm">{item.brand}</p>
+                              <p className="text-slate-600 text-sm">{item.year}</p>
+                            </>
+                          )}
                         </div>
+
                         <Button
                           onClick={() => onRemoveItem(item.id)}
                           variant="ghost"
                           size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="size-4" />
                         </Button>
                       </div>
 
+                      {/* QUANTITY + PRICE */}
                       <div className="flex items-center justify-between">
-                        {/* Quantity Controls */}
                         <div className="flex items-center gap-3">
                           <p className="text-slate-600 text-sm">Cantidad:</p>
                           <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
@@ -104,10 +144,9 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
                           </div>
                         </div>
 
-                        {/* Price */}
                         <div className="text-right">
-                          <p className="text-slate-500 text-sm mb-1">Precio</p>
-                          <p className="text-slate-900">
+                          <p className="text-sm text-slate-500">Precio</p>
+                          <p className="text-slate-900 font-bold">
                             ${(item.price * item.quantity).toLocaleString()}
                           </p>
                         </div>
@@ -118,29 +157,25 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
               ))}
             </div>
 
-            {/* Summary */}
+            {/* SUMMARY */}
             <div>
               <Card className="bg-white border-0 shadow-sm p-6 sticky top-8">
                 <h3 className="text-slate-900 mb-6">Resumen de Compra</h3>
-
                 <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-slate-600">
+                  <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>${subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>IVA (16%)</span>
-                    <span>${tax.toLocaleString()}</span>
-                  </div>
-                  <div className="pt-4 border-t border-slate-200">
-                    <div className="flex justify-between">
-                      <span className="text-slate-900">Total</span>
-                      <span className="text-slate-900">${total.toLocaleString()}</span>
+
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between font-bold">
+                      <span>Total</span>
+                      <span>${total.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 mb-3">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 mb-3" onClick={handleCheckout}>
                   <CreditCard className="size-5 mr-2" />
                   Finalizar Compra
                 </Button>
@@ -152,17 +187,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
                 >
                   Continuar Comprando
                 </Button>
-
-                {/* Info */}
-                <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                  <p className="text-slate-700 text-sm">
-                    ✓ Envío gratuito
-                    <br />
-                    ✓ Garantía incluida
-                    <br />
-                    ✓ Financiamiento disponible
-                  </p>
-                </div>
               </Card>
             </div>
           </div>
