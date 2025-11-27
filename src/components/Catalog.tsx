@@ -15,23 +15,21 @@ type CatalogProps = {
   cartItemsCount: number;
 };
 
-// Imagen de respaldo
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?q=80&w=1000&auto=format&fit=crop";
 
 export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }: CatalogProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [search, setSearch] = useState("");
-  const [hideOutOfStock, setHideOutOfStock] = useState(false); // Renombrado para claridad
+  const [hideOutOfStock, setHideOutOfStock] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Formulario actualizado con stock
   const [newVehicle, setNewVehicle] = useState({
     brand: 'Ford', 
     model: '', 
     year: new Date().getFullYear(), 
     price: '' as number | string,      
     horsepower: '' as number | string,
-    stock: '' as number | string, // Nuevo campo
+    stock: '' as number | string,
     description: '', 
     image: ''
   });
@@ -50,12 +48,13 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
   }, []);
 
   const markAsSold = async (id: number) => {
+    if (!window.confirm("¿Seguro que quieres vender este vehículo?")) return;
     try {
-      // Asumimos que el backend ahora descuenta 1 al stock en este endpoint
-      await axios.put(`http://localhost:3001/vehicles/sell/${id}`);
+      await axios.post(`http://localhost:3001/vehicles/sell/${id}`);
       loadVehicles();
     } catch (error) {
-      console.error("Error marcando venta:", error);
+      console.error("Error al vender vehículo:", error);
+      alert("No se pudo realizar la venta.");
     }
   };
 
@@ -72,12 +71,11 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
           year: Number(newVehicle.year),
           price: Number(newVehicle.price),
           horsepower: Number(newVehicle.horsepower),
-          stock: Number(newVehicle.stock) || 1, // Enviamos el stock
+          stock: Number(newVehicle.stock) || 1,
           image: newVehicle.image 
       };
       await axios.post("http://localhost:3001/vehicles", payload);
       setIsAdding(false);
-      // Limpiar formulario
       setNewVehicle({ 
         brand: 'Ford', model: '', year: 2025, price: '', 
         horsepower: '', stock: '', description: '', image: '' 
@@ -91,7 +89,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
 
   const filtered = vehicles.filter(v => {
     const matchesSearch = `${v.brand} ${v.model} ${v.year}`.toLowerCase().includes(search.toLowerCase());
-    // Filtro basado en stock > 0
     const matchesStockFilter = hideOutOfStock ? v.stock > 0 : true; 
     return matchesSearch && matchesStockFilter;
   });
@@ -101,7 +98,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
       <Sidebar currentView="catalog" onNavigate={onNavigate} onLogout={onLogout} cartItemsCount={cartItemsCount} />
 
       <div className="flex-1 p-8">
-        
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
             <div>
@@ -165,7 +161,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                             <Input placeholder="Ej. Mustang GT" value={newVehicle.model} onChange={e => setNewVehicle({...newVehicle, model: e.target.value})} required />
                         </div>
                         
-                        {/* GRID DE 4 COLUMNAS PARA INCLUIR STOCK */}
                         <div className="grid grid-cols-4 gap-3">
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-slate-500">Año</label>
@@ -181,7 +176,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                             </div>
                         </div>
 
-                        {/* INPUT STOCK */}
                         <div className="grid grid-cols-2 gap-3">
                              <div className="space-y-1">
                                 <label className="text-xs font-semibold text-slate-500">Stock Inicial</label>
@@ -230,19 +224,14 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
         <div className="grid grid-cols-3 xl:grid-cols-4 gap-6 pb-10">
           {filtered.map(vehicle => (
             <Card key={vehicle.id} className="shadow-sm hover:shadow-lg transition flex flex-col h-full overflow-hidden border-slate-200 rounded-lg font-sans group">
-              
-              {/* IMAGEN Y OVERLAY DE AGOTADO */}
               <div className="relative w-full bg-slate-200 overflow-hidden" style={{ height: '160px' }}>
                 <img
                   src={vehicle.image || DEFAULT_IMAGE}
                   alt={vehicle.model}
                   onError={(e) => { e.currentTarget.src = DEFAULT_IMAGE; }}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  // Si stock es 0, ponemos gris la imagen
                   className={`transition duration-500 ${vehicle.stock === 0 ? 'grayscale opacity-70' : 'group-hover:scale-105'}`}
                 />
-
-                {/* ETIQUETA AGOTADO (SOLO SI STOCK ES 0) */}
                 {vehicle.stock === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
                      <span className="border-2 border-white bg-slate-700 text-white px-3 py-1 rounded font-bold text-xs transform -rotate-12 shadow-xl">
@@ -278,10 +267,7 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
 
                 <div className="pt-3 border-t border-slate-100 mt-auto">
                   <p className="text-slate-900 text-xl font-bold mb-3">${vehicle.price.toLocaleString()}</p>
-                  
-                  {/* BOTONES */}
                   <div className="grid grid-cols-2 gap-2">
-                    
                     <Button
                         variant="outline"
                         className="h-9 text-xs border-slate-300 text-slate-700 hover:bg-slate-50"
@@ -290,7 +276,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                         <Info className="mr-1 size-3.5" /> Más Info
                     </Button>
 
-                    {/* BOTÓN VENDER (DESHABILITADO SI STOCK 0) */}
                     {vehicle.stock > 0 ? (
                         <Button
                             className="h-9 text-xs bg-slate-900 text-white hover:bg-slate-800"
@@ -308,7 +293,6 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                     )}
                   </div>
                 </div>
-
               </div>
             </Card>
           ))}
