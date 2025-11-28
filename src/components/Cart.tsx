@@ -17,7 +17,7 @@ type CartProps = {
 
 export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogout }: CartProps) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal; // Sin IVA automático para ventas reales
+  const total = subtotal;
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -35,8 +35,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
       }
 
       alert("Compra realizada correctamente!");
-
-      // Vaciar carrito local
       items.forEach(item => onRemoveItem(item.id));
 
       onNavigate("catalog");
@@ -56,7 +54,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
       />
 
       <div className="flex-1 p-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-slate-900 mb-2">Carrito de Compra</h1>
           <p className="text-slate-600">
@@ -80,13 +77,11 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
         ) : (
           <div className="grid grid-cols-3 gap-6">
 
-            {/* ITEMS */}
             <div className="col-span-2 space-y-4">
               {items.map((item) => (
                 <Card key={item.id} className="bg-white border-0 shadow-sm p-6">
                   <div className="flex gap-6">
 
-                    {/* IMAGE */}
                     <div className="w-48 h-32 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
                       <ImageWithFallback
                         src={item.image}
@@ -94,8 +89,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
                         className="w-full h-full object-cover"
                       />
                     </div>
-
-                    {/* DETAILS */}
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -119,7 +112,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
                         </Button>
                       </div>
 
-                      {/* QUANTITY + PRICE */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <p className="text-slate-600 text-sm">Cantidad:</p>
@@ -157,7 +149,6 @@ export function Cart({ items, onNavigate, onRemoveItem, onUpdateQuantity, onLogo
               ))}
             </div>
 
-            {/* SUMMARY */}
             <div>
               <Card className="bg-white border-0 shadow-sm p-6 sticky top-8">
                 <h3 className="text-slate-900 mb-6">Resumen de Compra</h3>

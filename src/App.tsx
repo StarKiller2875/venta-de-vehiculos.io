@@ -8,7 +8,6 @@ import { VehicleDetail } from './components/VehicleDetail';
 import { Cart } from './components/Cart';
 import { AdminPanel } from './components/AdminPanel';
 
-// ------------------- TIPOS -------------------
 export type Vehicle = {
   id: number;
   brand: string;
@@ -43,8 +42,6 @@ export type CartItem = {
   year?: number;
 };
 
-// ------------------------------------------------
-
 export default function App() {
   const [currentView, setCurrentView] = useState<
     'login' | 'dashboard' | 'catalog' | 'accessories' | 'detail' | 'cart' | 'admin'
@@ -55,7 +52,6 @@ export default function App() {
 
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // ------------------ LOGIN ------------------
   const handleLogin = () => {
     setIsAuthenticated(true);
     setCurrentView('dashboard');
@@ -67,13 +63,11 @@ export default function App() {
     setCart([]);
   };
 
-  // ------------------ VER DETALLE VEHÍCULO ------------------
   const handleViewVehicle = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setCurrentView('detail');
   };
 
-  // ------------------ AGREGAR VEHÍCULO AL CARRITO ------------------
   const addVehicleToCart = (vehicle: Vehicle) => {
     setCart(prev => {
       const existe = prev.find(i => i.id === vehicle.id && i.type === 'vehicle');
@@ -103,7 +97,6 @@ export default function App() {
     });
   };
 
-  // ------------------ AGREGAR ACCESORIO AL CARRITO ------------------
   const addAccessoryToCart = (acc: Accessory) => {
     setCart(prev => {
       const existe = prev.find(i => i.id === acc.id && i.type === 'accessory');
@@ -129,13 +122,9 @@ export default function App() {
       ];
     });
   };
-
-  // ------------------ REMOVER ITEM ------------------
   const handleRemoveFromCart = (id: number) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
-
-  // ------------------ ACTUALIZAR CANTIDAD ------------------
   const handleUpdateQuantity = (id: number, quantity: number) => {
     if (quantity <= 0) {
       handleRemoveFromCart(id);
@@ -147,8 +136,6 @@ export default function App() {
       )
     );
   };
-
-  // ------------------ RENDER ------------------
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;

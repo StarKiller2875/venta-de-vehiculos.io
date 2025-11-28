@@ -136,8 +136,9 @@ export function AccessoriesCatalog({ onNavigate, onLogout, onAddAccessory, cartI
 
                 <div className="pt-2 border-t border-slate-100 mt-auto">
                   <p className="text-slate-900 text-lg font-bold mb-3">
-                    ${item.price.toLocaleString()}
+                     ${Number(item.price).toLocaleString()}
                   </p>
+
 
                   <div className="grid grid-cols-2 gap-2">
                     <Button

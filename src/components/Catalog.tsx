@@ -266,7 +266,7 @@ export function Catalog({ onNavigate, onViewVehicle, onLogout, cartItemsCount }:
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 mt-auto">
-                  <p className="text-slate-900 text-xl font-bold mb-3">${vehicle.price.toLocaleString()}</p>
+                  <p className="text-slate-900 text-xl font-bold mb-3">${Number(vehicle.price).toLocaleString()}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                         variant="outline"
